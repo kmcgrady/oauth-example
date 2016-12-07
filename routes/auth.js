@@ -12,7 +12,7 @@ const router = express.Router();
 
 const strategy = new OAuth2Strategy({
   authorizationURL: 'https://www.linkedin.com/oauth/v2/authorization',
-  scope: ['r_basicprofile', 'r_emailaddress', 'w_share'],
+  scope: ['r_basicprofile', 'r_emailaddress'],
   tokenURL: 'https://www.linkedin.com/oauth/v2/accessToken',
   clientID: process.env.LINKEDIN_CLIENT_ID,
   clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
@@ -30,12 +30,12 @@ const strategy = new OAuth2Strategy({
     liProfile = JSON.parse(linkedInProfile)
 
     return knex('users')
-      .where('email', liProfile.emailAddress)
+      .where('linkedin_id', liProfile.id)
       .first();
   })
   .then((user) => {
     if (user) {
-      return camelizeKeys(user);
+      return user;
     }
 
     return knex('users')
@@ -43,11 +43,12 @@ const strategy = new OAuth2Strategy({
         firstName: liProfile.firstName,
         lastName: liProfile.lastName,
         email: liProfile.emailAddress,
+        linkedInId: liProfile.id,
         linkedinToken: accessToken,
       }), '*');
     })
     .then((user) => {
-      done(null, user);
+      done(null, camelizeKeys(user));
     })
     .catch((err) => {
       done(err);
@@ -62,7 +63,7 @@ router.get('/linkedin/callback', passport.authenticate('oauth2', {
   session: false,
   failureRedirect: '/'
 }), (req, res) => {
-  console.log(req.user);
+  const expiry = new Date(Date.now() + 1000 * 60 * 60 * 3); // 3 hours
   const token = jwt.sign({ userId: req.user.id }, process.env.JWT_SECRET, {
     expiresIn: '3h'
   });

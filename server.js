@@ -6,15 +6,15 @@ if (process.env.NODE_ENV !== 'production') {
 
 const express = require('express');
 const passport = require('passport');
-const auth = require('./routes/auth');
 
 const app = express();
 
 app.disable('x-powered-by');
 
 app.use(passport.initialize());
-
 app.use(express.static('public'));
+
+const auth = require('./routes/auth');
 
 app.use('/auth', auth);
 
